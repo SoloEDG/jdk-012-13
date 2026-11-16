@@ -28,7 +28,17 @@ export type GalleryDocument = {
 export type TourState = {
   routeId: string | null;
   step: number;
-  phase: "idle" | "walking" | "listening" | "paused" | "done";
+  phase:
+    | "idle"
+    | "walking"
+    | "listening"
+    | "paused"
+    | "waiting"
+    | "done";
+  /** Phase to return to when a paused tour resumes. */
+  resumePhase?: "walking" | "listening";
+  /** Why the tour is waiting, shown in the panel. */
+  reason?: string;
 };
 export type AudioState = {
   artworkId: string | null;

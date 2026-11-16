@@ -3,6 +3,7 @@ import type { AudioState } from "../../../shared/types";
 import { artworkById } from "../../../shared/catalog";
 import { captionAt } from "../lib/timeline";
 import { speak, stopSpeech } from "../lib/speech";
+
 export function useNarration(onEnd: () => void) {
   const [state, setState] = useState<AudioState>({
     artworkId: null,
@@ -13,6 +14,7 @@ export function useNarration(onEnd: () => void) {
   const callback = useRef(onEnd);
   callback.current = onEnd;
   const [supported, setSupported] = useState(true);
+
   useEffect(() => {
     if (!state.playing) return;
     let previous = performance.now();
@@ -24,19 +26,23 @@ export function useNarration(onEnd: () => void) {
     }, 150);
     return () => clearInterval(t);
   }, [state.playing]);
+
   const a = artworkById(state.artworkId);
   const caption = a ? captionAt(a, state.elapsed) : "";
+
   useEffect(() => {
     if (state.playing && caption) setSupported(speak(caption, state.rate));
     else stopSpeech();
     return stopSpeech;
   }, [caption, state.playing, state.rate]);
+
   useEffect(() => {
     if (a && state.playing && state.elapsed >= a.duration) {
       setState((s) => ({ ...s, playing: false, elapsed: a.duration }));
       callback.current();
     }
   }, [state.elapsed, state.playing, a]);
+
   return {
     state,
     caption,
@@ -51,9 +57,15 @@ export function useNarration(onEnd: () => void) {
             : 0,
         playing: true,
       })),
+    /** Stop playback but keep the position, so resuming does not restart. */
     pause: () => setState((s) => ({ ...s, playing: false })),
+    resume: () => setState((s) => (s.artworkId ? { ...s, playing: true } : s)),
     toggle: () => setState((s) => ({ ...s, playing: !s.playing })),
     seek: (elapsed: number) => setState((s) => ({ ...s, elapsed })),
     rate: (rate: number) => setState((s) => ({ ...s, rate })),
+    isPlaying: (id: string | null) =>
+      !!id && state.artworkId === id && state.playing,
   };
 }
+
+export type Narration = ReturnType<typeof useNarration>;

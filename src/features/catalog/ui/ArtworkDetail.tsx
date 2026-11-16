@@ -1,14 +1,19 @@
-import { Heart, Headphones, ArrowUpRight } from "lucide-react";
+import { Heart, Headphones, ArrowUpRight, Lock } from "lucide-react";
 import { artworkById } from "../../../shared/catalog";
 export function ArtworkDetail({
   id,
   saved,
+  canListen,
+  listenHint,
   onFavorite,
   onListen,
   onGo,
 }: {
   id: string | null;
   saved: boolean;
+  /** Narration is only available after physically reaching the artwork. */
+  canListen: boolean;
+  listenHint?: string;
   onFavorite: () => void;
   onListen: () => void;
   onGo: () => void;
@@ -39,10 +44,21 @@ export function ArtworkDetail({
       <p className="medium">{a.medium}</p>
       <p className="description">{a.description}</p>
       <div className="detail-actions">
-        <button className="primary" onClick={onListen}>
-          <Headphones size={16} />
+        <button
+          className="primary"
+          onClick={onListen}
+          disabled={!canListen}
+          aria-disabled={!canListen}
+          title={canListen ? undefined : listenHint}
+        >
+          {canListen ? <Headphones size={16} /> : <Lock size={15} />}
           收听作品讲解
         </button>
+        {!canListen && (
+          <p className="detail-hint">
+            {listenHint || "走近作品后才会开始讲解，隔墙或围挡之外不会提前播放。"}
+          </p>
+        )}
         <button className="text-button" onClick={onGo}>
           前往作品
           <ArrowUpRight size={16} />

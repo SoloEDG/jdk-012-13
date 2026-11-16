@@ -1126,3 +1126,192 @@ textarea {
     margin: 3px 0;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Temporary walking rules + navigation feedback                       */
+/* ------------------------------------------------------------------ */
+.nav-controls {
+  margin-top: 16px;
+  border: 1px solid #3b4534;
+  background: #242d20;
+}
+.nav-controls-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  font-size: 10px;
+  color: #c9d1b6;
+  text-align: left;
+}
+.nav-controls-toggle svg {
+  color: #b9ac81;
+}
+.nav-controls-toggle small {
+  margin-left: auto;
+  font-size: 8px;
+  color: #8d9879;
+}
+.nav-controls-body {
+  padding: 4px 12px 13px;
+  border-top: 1px solid #3b4534;
+  display: grid;
+  gap: 12px;
+}
+.nav-hint {
+  font-size: 9px;
+  line-height: 1.8;
+  color: #8d9879;
+  margin: 8px 0 0;
+}
+.nav-field > span {
+  display: block;
+  font-size: 9px;
+  color: #a4ae90;
+  margin-bottom: 7px;
+}
+.segmented {
+  display: flex;
+  gap: 5px;
+}
+.segmented button,
+.chip {
+  border: 1px solid #4b553f;
+  color: #aeb79b;
+  font-size: 9px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.segmented button {
+  flex: 1;
+  justify-content: center;
+}
+.segmented button.selected,
+.chip.active {
+  border-color: #c3b380;
+  color: #e0d3a9;
+  background: #38422f;
+}
+.nav-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip small {
+  font-size: 8px;
+  opacity: 0.7;
+}
+.chip:disabled {
+  opacity: 0.35;
+}
+.nav-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 9px;
+  color: #aeb79b;
+  line-height: 1.6;
+}
+.nav-switch input {
+  accent-color: #c3b380;
+  margin-top: 2px;
+}
+.nav-switch small {
+  display: block;
+  font-size: 8px;
+  color: #7f8a6e;
+}
+.nav-warning {
+  font-size: 9px;
+  line-height: 1.7;
+  color: #d9b487;
+  border-left: 2px solid #b08048;
+  padding-left: 8px;
+  margin: 0;
+}
+.nav-banner {
+  position: absolute;
+  top: 60px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  font-size: 10px;
+  color: #eef1e2;
+  background: #2b332ac9;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+.nav-banner.go {
+  border-left: 2px solid #7fae8c;
+}
+.nav-banner.ok {
+  border-left: 2px solid #c6b47f;
+}
+.nav-banner.warn {
+  border-left: 2px solid #c07a52;
+  color: #f6e3d2;
+}
+.nav-banner small {
+  margin-left: auto;
+  font-size: 9px;
+  opacity: 0.8;
+}
+.nav-banner .banner-action {
+  pointer-events: auto;
+  margin-left: auto;
+  border: 1px solid #c07a52;
+  padding: 3px 8px;
+  font-size: 9px;
+}
+.nav-progress {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  background: #ffffff2e;
+  max-width: 180px;
+}
+.nav-progress i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  background: #9cc3a4;
+  transition: width 0.2s linear;
+}
+.nav-reason {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 2px solid #c07a52;
+  background: #2a2f24;
+  font-size: 10px;
+  line-height: 1.8;
+  color: #dfc3a8;
+}
+.detail-hint {
+  font-size: 9px;
+  line-height: 1.7;
+  color: #9a9077;
+  margin: 0 0 8px;
+  text-align: center;
+}
+.tour-notice {
+  font-size: 9px;
+  line-height: 1.7;
+  color: #b9c6a4;
+  border-left: 2px solid #7c8f68;
+  padding-left: 8px;
+  margin: 8px 0 0;
+}
+.tour-notice.warning {
+  color: #e0c39d;
+  border-color: #b08048;
+}
+.primary:disabled {
+  background: #4a4d3f;
+  color: #9da38d;
+}

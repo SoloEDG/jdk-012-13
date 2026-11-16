@@ -9,14 +9,19 @@ import {
   Move,
   Info,
   X,
+  Navigation,
+  Flag,
 } from "lucide-react";
-import { Viewport, Map } from "../features/space";
+import { Viewport, Map, NavControls } from "../features/space";
 import { ArtworkList, ArtworkDetail } from "../features/catalog";
 import { TourPanel } from "../features/tours";
 import { AudioPlayer } from "../features/narration";
 import { CollectionPanel } from "../features/collection";
 import { artworks, artworkById } from "../shared/catalog";
 import { useGallery } from "./useGallery";
+
+const SIDE_TEXT = { front: "正面", left: "左侧", right: "右侧" } as const;
+
 export default function App() {
   const g = useGallery();
   const [tab, setTab] = useState("explore");
@@ -24,6 +29,53 @@ export default function App() {
   const [help, setHelp] = useState(false);
   const [side, setSide] = useState("works");
   const a = artworkById(g.catalog.active);
+
+  const st = g.status;
+  const routing = st.kind === "routing" ? st : null;
+  const unreachable = st.kind === "unreachable" ? st : null;
+  const displaced = st.kind === "displaced" ? st : null;
+  const arrived = st.kind === "arrived" ? st : null;
+  const focused = artworkById(g.catalog.focus);
+  const routeBlocked = !!unreachable || !!displaced;
+
+  const statusText = routing
+    ? `正在前往 · ${artworkById(routing.artworkId)?.title} · ${
+        SIDE_TEXT[routing.side]
+      }停靠`
+    : unreachable
+      ? `暂不可达 · ${artworkById(unreachable.artworkId)?.title}`
+      : displaced
+        ? "正在移出围挡"
+        : arrived
+          ? `已到达 · ${artworkById(arrived.artworkId)?.title} · ${
+              SIDE_TEXT[arrived.side]
+            }`
+          : "";
+
+  const canListen =
+    !!g.catalog.active && g.catalog.nearby === g.catalog.active;
+  const tourPanel = (
+    <TourPanel
+      state={g.tour.state}
+      notice={g.tour.notice}
+      progress={
+        g.route && g.route.source === "tour" ? g.progress : tourFallback(g)
+      }
+      waitingReason={
+        g.tour.state.phase === "waiting" ? g.tour.state.reason : undefined
+      }
+      onStart={(id) => {
+        g.startTour(id);
+        setTab("journeys");
+      }}
+      onPause={g.pauseTour}
+      onResume={g.resumeTour}
+      onStop={g.stopTour}
+      onNext={g.nextTour}
+      onRetry={() => g.tour.retry()}
+    />
+  );
+
   return (
     <div className="app">
       <header>
@@ -107,18 +159,28 @@ export default function App() {
             <Map
               position={g.walker.position}
               active={g.catalog.active}
+              nav={g.nav.model}
+              route={g.route}
+              status={g.status}
+              stopSide={g.route?.stopSide || null}
               onSelect={g.go}
               large
             />
           )}
-          <TourPanel
-            state={g.tour.state}
-            onStart={g.tour.start}
-            onPause={g.pauseTour}
-            onResume={g.tour.resume}
-            onStop={g.stopTour}
-            onNext={g.nextTour}
+          <NavControls
+            settings={g.nav.settings}
+            model={g.nav.model}
+            barrierCount={g.nav.settings.barriers.length}
+            canUndo={g.nav.canUndo}
+            onToggleBarrier={g.nav.toggleBarrier}
+            onMinWidth={g.nav.setMinWidth}
+            onOneWay={g.nav.setOneWay}
+            onUndo={g.nav.undo}
+            onPlaceUnderfoot={() =>
+              g.nav.placeBarrier(g.walker.position.x, g.walker.position.z)
+            }
           />
+          {tourPanel}
           <div className="sidebar-footer">
             <Compass size={15} />
             <span>慢下来，遇见艺术的另一面。</span>
@@ -141,12 +203,20 @@ export default function App() {
             <Viewport
               position={g.walker.positionRef}
               yaw={g.walker.yaw}
+              nav={g.nav.model}
+              path={g.route?.path || []}
+              stop={g.route?.stop || null}
+              blocked={routeBlocked}
               onSelect={g.go}
             />
             <div className="scene-top">
               <span>
                 <span className="live-dot" />
-                自由探索中
+                {g.tour.state.phase === "listening"
+                  ? "讲解中"
+                  : routing
+                    ? "导航中"
+                    : "自由探索中"}
               </span>
               <button
                 className="glass-button"
@@ -167,10 +237,41 @@ export default function App() {
               {g.catalog.nearby ? a?.title : "万物之间 · 主展厅"}
               <small>
                 {g.catalog.nearby
-                  ? "靠近作品 · 可收听讲解"
+                  ? `靠近作品 · ${SIDE_TEXT[g.catalog.nearbySide || "front"]}可收听讲解`
                   : "拖动视角，发现你的下一次共鸣"}
               </small>
             </div>
+
+            {statusText && (
+              <div
+                className={`nav-banner ${unreachable ? "warn" : displaced ? "warn" : routing ? "go" : "ok"}`}
+                role="status"
+                aria-live="polite"
+              >
+                <Navigation size={14} />
+                <span>{statusText}</span>
+                {routing && (
+                  <>
+                    <span className="nav-progress">
+                      <i style={{ width: `${Math.round(g.progress * 100)}%` }} />
+                    </span>
+                    <small>{g.distanceLeft.toFixed(1)} 米</small>
+                  </>
+                )}
+                {unreachable && (
+                  <button className="banner-action" onClick={() => g.tour.state.phase !== "idle" && g.stopTour()}>
+                    结束导览
+                  </button>
+                )}
+              </div>
+            )}
+            {focused && !routing && !arrived && !unreachable && (
+              <div className="nav-banner go" role="status">
+                <Flag size={14} />
+                <span>目标 · {focused.title}</span>
+              </div>
+            )}
+
             <div
               className="mini-map"
               onClick={() => setMapOpen(true)}
@@ -185,6 +286,10 @@ export default function App() {
               <Map
                 position={g.walker.position}
                 active={g.catalog.active}
+                nav={g.nav.model}
+                route={g.route}
+                status={g.status}
+                stopSide={g.route?.stopSide || null}
                 onSelect={g.go}
               />
             </div>
@@ -205,6 +310,16 @@ export default function App() {
               </span>
             </div>
           </div>
+          {unreachable && (
+            <div className="nav-reason" role="alert">
+              {unreachable.reason}
+            </div>
+          )}
+          {displaced && (
+            <div className="nav-reason" role="status">
+              {displaced.reason}
+            </div>
+          )}
           <div className="scene-caption">
             <span>让每一次停留，都成为一次发现。</span>
             <span>
@@ -219,7 +334,7 @@ export default function App() {
             </div>
             <button
               onClick={() => {
-                g.tour.start("nature");
+                g.startTour("nature");
                 setTab("journeys");
               }}
             >
@@ -250,14 +365,7 @@ export default function App() {
                 <h2>沿着共鸣，出发。</h2>
                 <p>选择一条路线，空间导航与作品讲解将陪伴你完成这段旅程。</p>
               </div>
-              <TourPanel
-                state={g.tour.state}
-                onStart={g.tour.start}
-                onPause={g.pauseTour}
-                onResume={g.tour.resume}
-                onStop={g.stopTour}
-                onNext={g.nextTour}
-              />
+              {tourPanel}
             </>
           ) : (
             <ArtworkDetail
@@ -265,11 +373,20 @@ export default function App() {
               saved={g.collection.document.favorites.includes(
                 g.catalog.active || "",
               )}
+              canListen={canListen}
+              listenHint={
+                routing
+                  ? "到达作品前不会开始讲解，避免在围挡外提前播放。"
+                  : unreachable
+                    ? unreachable.reason
+                    : "走近作品后才会开始讲解，隔墙或围挡之外不会提前播放。"
+              }
               onFavorite={() => {
                 if (g.catalog.active) g.collection.toggle(g.catalog.active);
               }}
               onListen={() => {
-                if (g.catalog.active) g.narration.play(g.catalog.active);
+                if (canListen && g.catalog.active)
+                  g.narration.play(g.catalog.active);
               }}
               onGo={() => {
                 if (g.catalog.active) g.go(g.catalog.active);
@@ -331,10 +448,13 @@ export default function App() {
               <>
                 <p>使用 W / A / S / D 或方向键自由行走；拖动画面转动视角。</p>
                 <p>
-                  点击画中的作品或左侧列表，自动前往。靠近作品后，右侧切换介绍。
+                  点击画中的作品或左侧列表，导航会绕开中央展台，停靠在作品正面或侧面；地图上显示的是实际行走的路径。
                 </p>
                 <p>
-                  主题导览会带你依次前往作品并开始讲解。收藏喜欢的作品，在“我的收藏”写下感想并下载参观回顾。
+                  作品介绍只在真正走到作品前、并且视线没有被围挡遮挡时切换；在隔墙旁边不会提前开始讲解。
+                </p>
+                <p>
+                  “临时通行条件”可以布置围挡、调整最小通行宽度和单向通道。条件改变后导航会从你脚下重新规划，不会把你送回入口；目标变得不可达时会说明原因。
                 </p>
                 <p>
                   讲解由设备的中文语音合成播放；没有中文语音时仍可阅读同步字幕。
@@ -344,6 +464,10 @@ export default function App() {
               <Map
                 position={g.walker.position}
                 active={g.catalog.active}
+                nav={g.nav.model}
+                route={g.route}
+                status={g.status}
+                stopSide={g.route?.stopSide || null}
                 onSelect={(id) => {
                   g.go(id);
                   setMapOpen(false);
@@ -356,4 +480,11 @@ export default function App() {
       )}
     </div>
   );
+}
+
+function tourFallback(g: ReturnType<typeof useGallery>) {
+  const r = g.tour.route;
+  if (!r) return 0;
+  if (g.tour.state.phase === "done") return 1;
+  return Math.min(1, g.tour.state.step / r.stops.length);
 }

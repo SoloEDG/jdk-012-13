@@ -2,19 +2,39 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import type { Point } from "../../../shared/types";
 import { buildScene, disposeScene } from "../lib/buildScene";
+import type { NavModel } from "../lib/nav";
+
+export type ViewportNav = {
+  nav: NavModel;
+  /** Floor path of the active route (empty when idle). */
+  path: Point[];
+  stop: Point | null;
+  blocked: boolean;
+};
+
 export function Viewport({
   position,
   yaw,
+  nav,
+  path,
+  stop,
+  blocked,
   onSelect,
 }: {
   position: React.RefObject<Point>;
   yaw: React.RefObject<number>;
+  nav: NavModel;
+  path: Point[];
+  stop: Point | null;
+  blocked: boolean;
   onSelect: (id: string) => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const select = useRef(onSelect);
   select.current = onSelect;
   const [error, setError] = useState("");
+  const handle = useRef<ReturnType<typeof buildScene> | null>(null);
+
   useEffect(() => {
     const el = root.current!;
     let renderer: THREE.WebGLRenderer;
@@ -27,7 +47,9 @@ export function Viewport({
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     el.appendChild(renderer.domElement);
-    const { scene, frames, sculpture } = buildScene();
+    const built = buildScene();
+    handle.current = built;
+    const { scene, frames, sculpture } = built;
     const camera = new THREE.PerspectiveCamera(65, 1, 0.1, 80);
     const resize = () => {
       renderer.setSize(el.clientWidth, el.clientHeight);
@@ -88,8 +110,19 @@ export function Viewport({
       disposeScene(scene);
       renderer.dispose();
       renderer.domElement.remove();
+      handle.current = null;
     };
   }, [position, yaw]);
+
+  // Overlay geometry tracks the same navigation model used for collision.
+  useEffect(() => {
+    handle.current?.updateNav(nav);
+  }, [nav]);
+
+  useEffect(() => {
+    handle.current?.updateRoute(path, stop, blocked);
+  }, [path, stop, blocked]);
+
   return (
     <div className="viewport" ref={root}>
       {error && <div className="webgl-error">{error}</div>}
